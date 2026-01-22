@@ -73,18 +73,18 @@ Prints "Hello, world!" to the terminal after doing an absurd amount of unnecessa
 ## Compilation
 
 ```bash
-gcc -Wall -Wextra -pedantic -o terrible terrible.c -lpthread
+gcc -Wall -Wextra -pedantic -o goodbyecruelworld goodbyecruelworld.c -lpthread
 ```
 
 ## Running
 
 ```bash
-./terrible
+./goodbyecruelworld
 ```
 
 Or with timing:
 ```bash
-time ./terrible
+time ./goodbyecruelworld
 ```
 
 ## Expected Behavior
