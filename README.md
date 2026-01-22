@@ -116,3 +116,4 @@ Public domain. Use this code however you want.
 ## Warning
 
 This code is intentionally terrible. Do not use in production. Do not use anywhere. 
+I am not responsible for any damage this script does to your system. Use at your own risk. (however, i have ran it myself and it hasn't wreaked havoc.. yet)
