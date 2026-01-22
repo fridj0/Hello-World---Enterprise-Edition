@@ -1,4 +1,3 @@
-/*  do not compile with -Wall -Wextra -pedantic  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,7 +8,7 @@
 #include <time.h>
 #include <stddef.h>
 
-#define EVER ;;
+#define EVER ;; // ohh yes
 #define MAGIC 13
 #define LOCK pthread_mutex_lock(&mb->mute);
 #define UNLOCK pthread_mutex_unlock(&mb->mute);
@@ -34,26 +33,69 @@ static volatile int max_disasters = 25;
 
 /* yes i have been learning assembly, can't you tell? */
 
-/* CPU feature detection */
+#pragma once // alpha male vs sigma male vs #pragma male
+#pragma GCC optimize("O0") // this is the only time the word "optimize" is used in the entire file
+
+/* CPU feature detection - now cross-platform! */
 static void waste_cpuid(void){
     for(int i=0;i<1000;i++){
+#if defined(__x86_64__) || defined(__i386__)
         unsigned int eax, ebx, ecx, edx;
         __asm__ __volatile__(
             "cpuid"
             : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
             : "a"(0)
+            : "memory"
         );
+#elif defined(__aarch64__)
+        /* ARM64: Read system registers - use EL0 accessible register */
+        unsigned long ctr;
+        __asm__ __volatile__("mrs %0, ctr_el0" : "=r"(ctr) :: "memory");
+        (void)ctr;
+#elif defined(__arm__)
+        /* ARM32: Use MIDR from CP15 if available, otherwise just waste cycles */
+#ifdef __ARM_ARCH_7A__
+        unsigned long midr;
+        __asm__ __volatile__("mrc p15, 0, %0, c0, c0, 0" : "=r"(midr) :: "memory");
+        (void)midr;
+#else
+        volatile int x = i * i;
+        (void)x;
+#endif
+#elif defined(__powerpc__) || defined(__ppc__)
+        /* PowerPC: Read processor version register - SPR 287 */
+        unsigned long pvr;
+        __asm__ __volatile__("mfspr %0, 287" : "=r"(pvr) :: "memory");
+        (void)pvr;
+#else
+        /* Generic waste */
+        volatile int x = i * i;
+        (void)x;
+#endif
     }
 }
 
 /* Serialize execution, ruins CPU pipelining */
 static void serialize_everything(void){
+#if defined(__x86_64__) || defined(__i386__)
     __asm__ __volatile__(
         "mfence\n\t"
         "lfence\n\t"
         "sfence\n\t"
         : : : "memory"
     );
+#elif defined(__aarch64__) || defined(__arm__)
+    /* ARM: Data Memory Barrier + Data Synchronization Barrier + Instruction Synchronization Barrier */
+    __asm__ __volatile__("dmb sy" ::: "memory");
+    __asm__ __volatile__("dsb sy" ::: "memory");
+    __asm__ __volatile__("isb" ::: "memory");
+#elif defined(__powerpc__) || defined(__ppc__)
+    /* PowerPC: sync + isync */
+    __asm__ __volatile__("sync" ::: "memory");
+    __asm__ __volatile__("isync" ::: "memory");
+#else
+    __sync_synchronize();
+#endif
 }
 
 /* put a brick wall every few feet on the highway */
@@ -62,31 +104,102 @@ static void trash_cache(void){
     volatile char buffer[256*1024]; // 256KB
     for(int i=0;i<256*1024;i+=64){
         buffer[i] = i;
+#if defined(__x86_64__) || defined(__i386__)
         __asm__ __volatile__("clflush (%0)" :: "r"(&buffer[i]) : "memory");
+#elif defined(__aarch64__)
+        /* ARM64: DC CIVAC (clean and invalidate by VA to PoC) */
+        __asm__ __volatile__("dc civac, %0" :: "r"(&buffer[i]) : "memory");
+#elif defined(__arm__)
+        /* ARM32: Use available cache operations or just barrier */
+#ifdef __ARM_ARCH_7A__
+        __asm__ __volatile__("mcr p15, 0, %0, c7, c14, 1" :: "r"(&buffer[i]) : "memory");
+#else
+        __asm__ __volatile__("" ::: "memory");
+#endif
+#elif defined(__powerpc__) || defined(__ppc__)
+        /* PowerPC: dcbf (data cache block flush) + sync to ensure completion */
+        __asm__ __volatile__("dcbf 0, %0" :: "r"(&buffer[i]) : "memory");
+        __asm__ __volatile__("sync" ::: "memory");
+#else
+        __sync_synchronize();
+#endif
     }
 }
 
-/* Spin on RDTSC, burns CPU cycles */
+/* Spin on timestamp counter, burns CPU cycles */
 static void burn_cycles(unsigned long long cycles){
+#if defined(__x86_64__) || defined(__i386__)
     unsigned int hi, lo, start_hi, start_lo;
-    __asm__ __volatile__("rdtsc" : "=a"(start_lo), "=d"(start_hi));
+    __asm__ __volatile__("rdtsc" : "=a"(start_lo), "=d"(start_hi) :: "memory");
     unsigned long long start = ((unsigned long long)start_hi << 32) | start_lo;
     unsigned long long now;
     do {
-        __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+        __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi) :: "memory");
         now = ((unsigned long long)hi << 32) | lo;
     } while(now - start < cycles);
+#elif defined(__aarch64__)
+    /* ARM64: Use generic timer counter */
+    unsigned long long start, now;
+    __asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(start) :: "memory");
+    do {
+        __asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(now) :: "memory");
+    } while(now - start < cycles);
+#elif defined(__arm__)
+    /* ARM32: Use cycle counter if available (requires kernel support), otherwise loop */
+#ifdef __ARM_ARCH_7A__
+    unsigned int start, now;
+    __asm__ __volatile__("mrc p15, 0, %0, c9, c13, 0" : "=r"(start) :: "memory");
+    do {
+        __asm__ __volatile__("mrc p15, 0, %0, c9, c13, 0" : "=r"(now) :: "memory");
+    } while((now - start) < (unsigned int)(cycles));
+#else
+    for(volatile unsigned long long i = 0; i < cycles/10; i++);
+#endif
+#elif defined(__powerpc__) || defined(__ppc__)
+    /* PowerPC: Use time base register - SPR 268 (TBL) and 269 (TBU) */
+    unsigned long long start, now;
+    unsigned long tbl, tbu, tbu2;
+    
+    /* Read 64-bit time base atomically */
+    do {
+        __asm__ __volatile__("mfspr %0, 269" : "=r"(tbu) :: "memory");  // TBU
+        __asm__ __volatile__("mfspr %0, 268" : "=r"(tbl) :: "memory");  // TBL
+        __asm__ __volatile__("mfspr %0, 269" : "=r"(tbu2) :: "memory"); // TBU again
+    } while(tbu != tbu2);
+    start = ((unsigned long long)tbu << 32) | tbl;
+    
+    do {
+        do {
+            __asm__ __volatile__("mfspr %0, 269" : "=r"(tbu) :: "memory");
+            __asm__ __volatile__("mfspr %0, 268" : "=r"(tbl) :: "memory");
+            __asm__ __volatile__("mfspr %0, 269" : "=r"(tbu2) :: "memory");
+        } while(tbu != tbu2);
+        now = ((unsigned long long)tbu << 32) | tbl;
+    } while(now - start < cycles);
+#else
+    /* Generic fallback - calibrated for ~2GHz CPU */
+    for(volatile unsigned long long i = 0; i < cycles/2; i++);
+#endif
 }
 
-/* slow is good */
+/* waste everyones time */
 static inline void waste(void){
     for(volatile unsigned long long i=0;i<10ULL;i++) {
+#if defined(__x86_64__) || defined(__i386__)
         __builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+        __asm__ __volatile__("yield" ::: "memory");
+#elif defined(__powerpc__) || defined(__ppc__)
+        /* PowerPC: or 31,31,31 is the standard priority nop */
+        __asm__ __volatile__("or 31,31,31" ::: "memory");
+#else
+        __asm__ __volatile__("" ::: "memory");
+#endif
     }
-    serialize_everything();
+    serialize_everything(); // serialize all the kingdoms!
 }
 
-/* allocate memory without freeing it (minecraft bedrock edition special) */
+/* allocate memory without ever freeing it (minecraft bedrock edition special) */
 static void* leaky_malloc(size_t n){
     void *p = mmap(NULL,n,PROT_READ|PROT_WRITE,
                    MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
@@ -231,7 +344,10 @@ static unsigned long long base_conversion_chaos(unsigned long long num){
     return strtoull(buf4, NULL, 31);
 }
 
-/* garbage generator (this is steaming garbage) */
+/* the generate_garbage function is a function that generates garbage, however the function is also garbage so am i the garbage generator? */
+/* who's gonna be the garbage disposal? */
+/* lets put the fork in the garbage disposal */
+/* DING DING DING DING DING DING DING DING DING DING */
 static void* generate_garbage(size_t size, int seed){
     void *garbage = leaky_malloc(size);
     if(!garbage) return NULL;
@@ -379,7 +495,7 @@ static void setBit(MessageBuilder *b,int byte,int bit,int val){
         }
     }
     
-    /* THE ELIF FAMILY REUNION */
+    /* THE ELSE IF FAMILY REUNION */
     /* brought to you by YandereDev*/
     if(!disaster){
         int r = rand();
@@ -520,7 +636,7 @@ static void printMessage(MessageBuilder *b){
         char_data[0] = b->codes[i];
         unsigned int nonce = mine_block(char_data, 1, difficulty);
         
-        /* get this shit out of here */
+        /* YOU ARE A FALSE PROPHET. SECURITY, TAKE HIM OUT OF HERE. */
         (void)nonce;
         
         int c = reconstructChar(b->codes, i);
@@ -606,5 +722,5 @@ int main(void){
     crash_free(mb);
     pthread_mutex_destroy(&mb->mute);
     
-    return EXIT_SUCCESS;
+    return EXIT_SUCCESS; // suffering from success
 }
