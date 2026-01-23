@@ -1,4 +1,4 @@
-```markdown
+
 # Hello, World! - Enterprise Edition™  
 > *A monument to overengineering, inefficiency, and unearned confidence.*
 
