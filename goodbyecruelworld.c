@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <time.h>
 #include <stddef.h>
+#include <math.h>
+#include <complex.h>
 
 #define EVER ;; // ohh yes
 #define MAGIC 13
@@ -34,7 +36,7 @@ static volatile int max_disasters = 25;
 /* yes i have been learning assembly, can't you tell? */
 
 #pragma once // alpha male vs sigma male vs #pragma male
-#pragma GCC optimize("O0") // this is the only time the word "optimize" is used in the entire file
+#pragma GCC optimize("O0") // this is the only time the word "optimize" is used in the entire file, and it's to make it run slower
 
 /* CPU feature detection - now cross-platform! */
 static void waste_cpuid(void){
@@ -100,6 +102,7 @@ static void serialize_everything(void){
 
 /* put a brick wall every few feet on the highway */
 /* evict data from the L1, L2 and L3 caches and make it walk all the way to system memory */
+/* i had to read a lot of papers to get this in ppc32 */
 static void trash_cache(void){
     volatile char buffer[256*1024]; // 256KB
     for(int i=0;i<256*1024;i+=64){
@@ -211,7 +214,7 @@ static void* leaky_malloc(size_t n){
 }
 
 /* crash if someone tries to free */
-static void crash_free(void *p){
+static void crash_free(volatile void *p){
     if(p && MAYBE) {
         raise(SIGSEGV);
     }
@@ -457,6 +460,238 @@ static void* scribbler(void *v){
     return NULL;
 }
 
+/* quantum superposition character state (it's both right and wrong until observed) */
+static unsigned char quantum_collapse(unsigned char value){
+    /* Schrodinger's byte */
+    double complex wave_function = value + value * I;
+    
+    for(int i=0;i<100;i++){
+        wave_function = csqrt(wave_function * conj(wave_function));
+        wave_function *= cexp(I * M_PI / 7.0);
+    }
+    
+    /* collapse wave function via observation */
+    double probability = cabs(wave_function);
+    unsigned char collapsed = (unsigned char)(probability * 255.0) % 256;
+    
+    return collapsed ^ value; // XOR with original for "quantum entanglement"
+}
+
+/* sort the bits of a byte using bubble sort (O(n²) for 8 bits!) */
+static unsigned char bubble_sort_bits(unsigned char value){
+    unsigned char bits[8];
+    for(int i=0;i<8;i++){
+        bits[i] = (value >> i) & 1;
+    }
+    
+    /* Bubble sort! */
+    for(int i=0;i<8;i++){
+        for(int j=0;j<7-i;j++){
+            if(bits[j] > bits[j+1]){
+                unsigned char temp = bits[j];
+                bits[j] = bits[j+1];
+                bits[j+1] = temp;
+            }
+        }
+    }
+    
+    /* reconstruct byte from sorted bits */
+    unsigned char result = 0;
+    for(int i=0;i<8;i++){
+        result |= bits[i] << i;
+    }
+    return result;
+}
+
+/* forward declaration for computeChar so training can use it */
+static int computeChar(int pos);
+
+/* neural network weights (now persistent!) */
+typedef struct {
+    double input_to_hidden[8][8];
+    double hidden_to_output[8][8];
+    double hidden_bias[8];
+    double output_bias[8];
+} NeuralNetwork;
+
+static NeuralNetwork *nn;
+
+/* initialize network with random weights */
+static void init_neural_network(void){
+    nn = leaky_malloc(sizeof(NeuralNetwork));
+    for(int i=0;i<8;i++){
+        for(int j=0;j<8;j++){
+            nn->input_to_hidden[i][j] = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+            nn->hidden_to_output[i][j] = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+        }
+        nn->hidden_bias[i] = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+        nn->output_bias[i] = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+    }
+}
+
+/* forward pass through network */
+static void neural_forward(double input[8], double hidden[8], double output[8]){
+    /* input to hidden layer */
+    for(int i=0;i<8;i++){
+        hidden[i] = nn->hidden_bias[i];
+        for(int j=0;j<8;j++){
+            hidden[i] += input[j] * nn->input_to_hidden[j][i];
+        }
+        hidden[i] = tanh(hidden[i]); // activation
+    }
+    
+    /* hidden to output layer */
+    for(int i=0;i<8;i++){
+        output[i] = nn->output_bias[i];
+        for(int j=0;j<8;j++){
+            output[i] += hidden[j] * nn->hidden_to_output[j][i];
+        }
+        output[i] = tanh(output[i]); // activation
+    }
+}
+
+/* backpropagation training step */
+static void neural_train(double input[8], double target[8], double learning_rate){
+    double hidden[8], output[8];
+    
+    /* forward pass */
+    neural_forward(input, hidden, output);
+    
+    /* calculate output layer error */
+    double output_error[8];
+    double output_delta[8];
+    for(int i=0;i<8;i++){
+        output_error[i] = target[i] - output[i];
+        /* derivative of tanh */
+        output_delta[i] = output_error[i] * (1.0 - output[i] * output[i]);
+    }
+    
+    /* calculate hidden layer error */
+    double hidden_error[8];
+    double hidden_delta[8];
+    for(int i=0;i<8;i++){
+        hidden_error[i] = 0;
+        for(int j=0;j<8;j++){
+            hidden_error[i] += output_delta[j] * nn->hidden_to_output[i][j];
+        }
+        hidden_delta[i] = hidden_error[i] * (1.0 - hidden[i] * hidden[i]);
+    }
+    
+    /* update weights hidden->output */
+    for(int i=0;i<8;i++){
+        for(int j=0;j<8;j++){
+            nn->hidden_to_output[i][j] += learning_rate * output_delta[j] * hidden[i];
+        }
+        nn->output_bias[i] += learning_rate * output_delta[i];
+    }
+    
+    /* update weights input->hidden */
+    for(int i=0;i<8;i++){
+        for(int j=0;j<8;j++){
+            nn->input_to_hidden[i][j] += learning_rate * hidden_delta[j] * input[i];
+        }
+        nn->hidden_bias[i] += learning_rate * hidden_delta[i];
+    }
+}
+
+/* train network on actual message data */
+static void train_on_message_data(void){
+    printf("Training neural network on message patterns");
+    fflush(stdout);
+    
+    double learning_rate = 0.1;
+    int epochs = 50000; // hit those books daniel-san, and no come out until you doctor
+
+    // jk i love pat morita and his wisdom
+    
+    for(int epoch=0;epoch<epochs;epoch++){
+        for(int pos=0;pos<MAGIC;pos++){
+            /* prepare input: position encoded as bits */
+            double input[8];
+            for(int i=0;i<8;i++){
+                input[i] = ((pos >> i) & 1) ? 1.0 : -1.0;
+            }
+            
+            /* prepare target: expected character */
+            int expected = computeChar(pos);
+            double target[8];
+            for(int i=0;i<8;i++){
+                target[i] = ((expected >> i) & 1) ? 1.0 : -1.0;
+            }
+            
+            /* we're going off the rails on a crazy train! */
+            neural_train(input, target, learning_rate);
+            
+            /* that moment when a pyromaniac crashes out at the 9th level in geometry dash */
+            if(epoch % 100 == 0 && pos == 0){
+                burn_cycles(10000);
+            }
+        }
+        
+        /* progress indicator (10 periods = done) */
+        if(epoch % 5000 == 0){
+            putchar('.');
+            fflush(stdout);
+        }
+        
+        /* generate garbage during training for maximum pain */
+        if(epoch % 1000 == 0){
+            generate_garbage(4096, epoch);
+        }
+    }
+    
+    printf(" Done!\n");
+    
+    /* validate training (properly) */
+    printf("Neural network validation:\n");
+    int correct = 0;
+    for(int pos=0;pos<MAGIC;pos++){
+        double input[8];
+        for(int i=0;i<8;i++){
+            input[i] = ((pos >> i) & 1) ? 1.0 : -1.0;
+        }
+        
+        double hidden[8], output[8];
+        neural_forward(input, hidden, output);
+        
+        unsigned char predicted = 0;
+        for(int i=0;i<8;i++){
+            if(output[i] > 0) predicted |= (1 << i);
+        }
+        
+        int expected = computeChar(pos);
+        if(predicted == expected){
+            correct++;
+            printf("  Position %d: ✓ '%c'\n", pos, (char)predicted);
+        } else {
+            printf("  Position %d: ✗ Expected '%c', got '%c'\n", pos, (char)expected, (char)predicted);
+        }
+    }
+    
+    printf("Accuracy: %d/%d (%.1f%%)\n", correct, MAGIC, (correct * 100.0) / MAGIC);
+}
+
+/* AI-powered character prediction */
+static unsigned char neural_network_predict(int position){
+    /* input layer: position converted to 8 neurons */
+    double input[8];
+    for(int i=0;i<8;i++){
+        input[i] = ((position >> i) & 1) ? 1.0 : -1.0;
+    }
+    
+    double hidden[8], output[8];
+    neural_forward(input, hidden, output);
+    
+    /* convert output neurons to byte */
+    unsigned char result = 0;
+    for(int i=0;i<8;i++){
+        if(output[i] > 0){
+            result |= (1 << i);
+        }
+    }
+    return result;
+}
+
 /* build message one bit at a time */
 static void setBit(MessageBuilder *b,int byte,int bit,int val){
     LOCK
@@ -584,9 +819,11 @@ static void setBit(MessageBuilder *b,int byte,int bit,int val){
         }
     }
     
+    /* Just set the damn bit without all the "helpful" corruption */
     int temp = b->codes[byte];
     temp ^= (-val ^ temp) & (1<<bit);
     b->codes[byte] = temp;
+    
     UNLOCK
     waste();
 }
@@ -612,8 +849,55 @@ static int computeChar(int pos){
     return y;
 }
 
+/* Thread pool manager for... character printing? */
+typedef struct {
+    pthread_t threads[16];
+    volatile int active;
+    volatile unsigned char result;
+    pthread_mutex_t result_mutex;
+} ThreadPool;
+
+static ThreadPool *pool;
+
+/* worker thread that does fuck all */
+static void* useless_worker(void *arg){
+    int *id = (int*)arg;
+    for(int i=0;i<1000;i++){
+        generate_garbage(1024, *id + i);
+        burn_cycles(10000);
+    }
+    free(id);
+    return NULL;
+}
+
+/* spawn thread pool just to print a single character */
+/* coughing baby vs hydrogen bomb */
+static void parallel_print_char(unsigned char c){
+    pool = leaky_malloc(sizeof(ThreadPool));
+    pthread_mutex_init(&pool->result_mutex, NULL);
+    pool->active = 16;
+    pool->result = c;
+    
+    /* spawn 16 worker threads to "help" */
+    for(int i=0;i<16;i++){
+        int *id = malloc(sizeof(int));
+        *id = i;
+        pthread_create(&pool->threads[i], NULL, useless_worker, id);
+    }
+    
+    /* wait for all workers to finish their work */
+    for(int i=0;i<16;i++){
+        pthread_join(pool->threads[i], NULL);
+    }
+    
+    /* finally print the character */
+    putchar(pool->result);
+    
+    pthread_mutex_destroy(&pool->result_mutex);
+}
+
 /* reconstruct char from bits */
-static int reconstructChar(unsigned char *codes, int pos){
+static int reconstructChar(volatile unsigned char *codes, int pos){
     int result = 0;
     LOCK
     for(volatile int bit=0;bit<8;bit++){
@@ -621,31 +905,156 @@ static int reconstructChar(unsigned char *codes, int pos){
         result |= b << bit;
     }
     UNLOCK
-    return result;
+    
+    /* triple-check using alternative method */
+    int verification = codes[pos];
+    if(result != verification){
+        /* it always matches, but you can never be too careful */
+        result = verification;
+    }
+    
+    /* quadruple-check using bit-by-bit reconstruction */
+    int final_check = 0;
+    for(int bit=0;bit<8;bit++){
+        if(codes[pos] & (1 << bit)){
+            final_check |= (1 << bit);
+        }
+    }
+    
+    /* democratic majority vote between the three methods */
+    if(result == verification) return result;
+    if(result == final_check) return result;
+    if(verification == final_check) return verification;
+    
+    /* no consensus! return random value */
+    return rand() % 256;
+}
+
+/* BLOCKCHAIN VALIDATION */
+/* each character must be validated by the previous character's hash */
+static int validate_blockchain(MessageBuilder *b, int pos){
+    if(pos == 0) return 1;
+    
+    unsigned char prev_hash[64];
+    terrible_sha256(b->codes[pos-1], prev_hash);
+    
+    /* current character must satisfy hash relationship with previous */
+    unsigned char curr_hash[64];
+    terrible_sha256(b->codes[pos], curr_hash);
+    
+    /* check if first 3 bytes of hashes form a valid "chain" */
+    int chain_valid = 1;
+    for(int i=0;i<3;i++){
+        if((prev_hash[i] ^ curr_hash[i]) % 7 != (pos % 7)){
+            chain_valid = 0;
+        }
+    }
+    return chain_valid;
+}
+
+/* fake some latency before each character to look busy */
+static void simulate_network_latency(void){
+    unsigned int delay_ms = 50 + (rand() % 200); // 50-250ms 
+    struct timespec ts;
+    ts.tv_sec = delay_ms / 1000;
+    ts.tv_nsec = (delay_ms % 1000) * 1000000;
+    nanosleep(&ts, NULL);
+    
+    /* 10% chance of "packet loss" requiring retry */
+    if(rand() % 100 < 10){
+        ts.tv_sec = 0;
+        ts.tv_nsec = 500000000; // extra 500ms penalty
+        nanosleep(&ts, NULL);
+    }
+}
+
+/* verify each character multiple times with different algorithms */
+static int verify_character_consensus(unsigned char expected, unsigned char actual){
+    /* algorithm 1: direct comparison */
+    int vote1 = (expected == actual);
+    
+    /* algorithm 2: XOR-based comparison */
+    int vote2 = ((expected ^ actual) == 0);
+    
+    /* algorithm 3: bit-by-bit comparison */
+    int vote3 = 1;
+    for(int bit=0;bit<8;bit++){
+        if(((expected >> bit) & 1) != ((actual >> bit) & 1)){
+            vote3 = 0;
+        }
+    }
+    
+    /* algorithm 4: hash-based comparison */
+    unsigned char hash1[64], hash2[64];
+    terrible_sha256(expected, hash1);
+    terrible_sha256(actual, hash2);
+    int vote4 = hashes_match(hash1, hash2);
+    
+    /* require 3 out of 4 consensus */
+    /* we love democracy */
+    int consensus = vote1 + vote2 + vote3 + vote4;
+    return consensus >= 3;
 }
 
 /* print with maximum syscalls */
+/* print with AI Consensus - The AI must be correct or we keep looping */
 static void printMessage(MessageBuilder *b){
     while(!print_ready){
+        burn_cycles(1000);
     }
     
-    for(volatile int i=0;i<b->length;i++){
-        /* MINE A BLOCK BEFORE EACH CHARACTER :3 */
-        int difficulty = 8 + (i * 1); // Increasing difficulty: 8 to 20 bits
-        unsigned char char_data[1];
-        char_data[0] = b->codes[i];
-        unsigned int nonce = mine_block(char_data, 1, difficulty);
+    printf("Starting AI-validated transmission...\n");
+
+    for(volatile int i=0; i<b->length; i++){
+        unsigned char expected = computeChar(i);
+        unsigned char predicted = 0;
+        int attempts = 0;
+
+        /* THE PURGATORY LOOP: AI must match reality to proceed */
+        while(1) {
+            attempts++;
+            
+            // 1. Get the current AI prediction
+            predicted = neural_network_predict(i);
+            
+            // 2. Verification
+            if(predicted == expected) {
+                // Consensus reached!
+                break; 
+            }
+
+            // 3. If the AI is wrong, take it out on the computer in a fit of alcoholic rage
+            // all it takes is one malformed output from a coding agent and your entire computer is deleted, so this is realistic don't worry
+            if(attempts % 500 == 0) {
+                trash_cache();
+                generate_garbage(2048, attempts + i);
+                serialize_everything();
+            }
+
+            // Optional: Print progress so you know it's not just frozen
+            if(attempts % 10000 == 0) {
+                fprintf(stderr, "\r[Pos %d] AI hallucinating... (Attempt %d)", i, attempts);
+                fflush(stderr);
+            }
+        }
+
+        /* Once out of the loop, the AI has "found" the character */
         
-        /* YOU ARE A FALSE PROPHET. SECURITY, TAKE HIM OUT OF HERE. */
-        (void)nonce;
+        // mine another block for no reason
+        unsigned char char_data[1] = {predicted};
+        mine_block(char_data, 1, 8 + i);
         
-        int c = reconstructChar(b->codes, i);
-        putchar(c);
+        // use the thread pool to print the AI's verified prediction
+        parallel_print_char(predicted);
+        
         fflush(stdout);
-        waste();
+        
+        // small delay to make the AI look like it's thinking (it's not.)
+        struct timespec ts = {0, 50000000L}; // 50ms
+        nanosleep(&ts, NULL);
     }
     putchar('\n');
-    fsync(fileno(stdout));
+    sync(); 
 }
 
 /* validation thread that sets print_ready */
@@ -667,7 +1076,7 @@ static void* validator(void *v){
             break;
         }
         
-        /* Extra garbage every 10 attempts */
+        /* more garbage every 10 attempts */
         if(attempts % 10 == 0){
             generate_garbage(16384, attempts * 2);
         }
@@ -683,6 +1092,11 @@ int main(void){
     
     disaster_count = 0;
     max_disasters = 50 + (rand() % 50);
+    
+    /* in order to prioritize efficiency, we at E Corp are utilizing generative AI tools to assist our staff members productivity. */
+    printf("Initializing AI subsystem...\n");
+    init_neural_network();
+    train_on_message_data();
     
     mb=leaky_malloc(sizeof(*mb));
     mb->codes=leaky_malloc(MAGIC*sizeof(unsigned char));
