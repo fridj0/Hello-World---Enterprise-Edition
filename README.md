@@ -1,119 +1,172 @@
-# Hello World (the long way)
+```markdown
+# Hello, World! - Enterprise Edition™  
+> *A monument to overengineering, inefficiency, and unearned confidence.*
 
-A deliberately terrible implementation of "Hello, world!"
+## Overview
 
-## What It Does
+This program exists to print **“Hello, world!”** in the most computationally expensive, memory-leaking, thread-spawning, cache-thrashing, pseudo-cryptographic, AI-assisted, blockchain-validated way possible.
 
-Prints "Hello, world!" to the terminal after doing an absurd amount of unnecessary computation.
+If your goal is:
+- Learning how **not** to write C
+- Stress-testing CPUs, schedulers, caches, and your sanity
+- Demonstrating that Turing completeness can be weaponized
+- Making profilers cry
+
+Then congratulations. This is production-ready.
+
+---
 
 ## Features
 
-###  Exponential Fibonacci
-- Calculates Fibonacci numbers up to the 25th term (by default) recursively
-- **Never memoizes** - recalculates everything from scratch every time
-- Used in garbage generation for maximum pain
+###  Artificial Intelligence
+- Includes a fully persistent **8×8×8 neural network**
+- Trains for **50,000 epochs**
+- Learns to predict characters that are already known
+- Validates itself and prints accuracy statistics for moral support
 
-###  Proof-of-Work Mining
-- Each character requires finding a valid "nonce" (like in bitcoin miners)
-- Mining difficulty **increases per character**: 8 bits → 20 bits
-- Last character requires ~1 million hash attempts on average
-- Inline assembly chaos injected every 1000/10000 attempts
+###  Blockchain Technology
+- Each character is validated against the previous character’s hash
+- Proof-of-work mining included
+- Zero financial reward guaranteed
 
-###  Inline Assembly
-- **CPUID spam** - Flushes CPU state 1000 times
-- **Memory fences** - Kills CPU pipelining (mfence, lfence, sfence)
-- **Cache thrashing** - Intentionally evicts 256KB from cache
-- **RDTSC spinning** - Burns CPU cycles by reading timestamp counter
+###  Quantum Computing
+- Uses complex numbers and wave functions
+- Characters are in superposition until observed
+- Collapsing the wave function still gives ASCII
 
-###  RNG Lottery System
-- Every bit set has a chance to corrupt the byte instead
-- Runs 20,000 RNG iterations + 128,000 hash iterations + 41,664 comparisons
-- Checks all C(64,3) = 41,664 combinations of 3 bytes in two 64-byte hashes
-- When collision found: prints "oops" and corrupts progress
-- Caps at 50-100 disasters per run (randomized)
-
-###  Garbage Generation
-- Generates 32KB of "garbage" data using:
-  - Exponential fibonacci (O(2^n) complexity)
-  - 5 rounds of hashing per byte
-  - Base conversion through 4 different number bases (7→13→23→31)
-  - Memory leaks: 128 bytes every 100 bytes written
-- **Validates by recomputing everything** (doubles the work!)
-- Called on every validator attempt
-
-###  Multi-threaded Chaos
-- **Scribbler thread**: Races to corrupt your data while building
-- **Validator thread**: Continuously checks if data is valid, generates garbage on every attempt
-- **Main thread**: Builds message one bit at a time with mutex locks
-- All threads fighting over shared state with maximum contention
-
-###  YandereDev Else-If Tree
-- **21 consecutive else-if branches** testing divisibility by primes
-- Each branch does pointless volatile operations
-- Maximum branch prediction chaos
-- Features classics like `r + r - r` and `r * 2`
+###  Massive Parallelism
+- Spawns **16 threads** to help print **one byte**
+- Threads generate garbage and burn cycles for teamwork
+- Synchronization overhead included at no extra cost
 
 ###  Memory Management
-- Allocates with `mmap()` and never frees (inspired by Minecraft Medrock Edition)
-- Small leaks scattered throughout (128 bytes per 100 bytes of garbage)
-- Large leaks in validator (32KB + 16KB per attempt)
-- 50% chance to crash with SIGSEGV when "freeing"
+- Custom `leaky_malloc()` backed by `mmap`
+- Memory is **never freed**
+- Attempting to free memory may crash the program (by design)
 
-### 🔀 Additional Inefficiencies
-- Bit-by-bit message construction with mutex locks
-- Triple XOR operations for simple bit setting
-- Pointless entropy addition and immediate removal
-- Reconstructs characters bit-by-bit instead of reading directly
-- Flushes stdout after every single character
-- fsync() on stdout at the end
-- Base conversions through multiple number systems
-- Checksum computation the "long way" (bit by bit)
-- If you get an "oops" the RNG lottery is currently broken so you're better off restarting it
+###  Mathematics
+- Recursive Fibonacci with zero memoization
+- Bubble-sort-based bit sorting (O(n²) on 8 bits!)
+- Arbitrary-base conversions via unnecessary intermediate steps
 
-## Compilation
+###  Cryptography (Allegedly)
+- Homegrown “SHA-256” (64 bytes, because why not)
+- RNG nested inside loops inside loops
+- Hash collisions searched the hard way
 
-```bash
-gcc -Wall -Wextra -pedantic -o goodbyecruelworld goodbyecruelworld.c -lpthread
+###  Chaos Engineering
+- Random data corruption events (“disasters”)
+- Cache eviction across architectures
+- Pipeline serialization
+- CPU feature detection for no reason
+- Artificial latency and packet loss simulation
+
+---
+
+## What Does It Actually Do?
+
+1. **Starts the process** and initializes globals, RNG usage, and counters, preparing a deliberately unstable runtime environment.
+
+2. **Allocates a neural network** using non-freeing `mmap`-backed memory and initializes random weights.
+
+3. **Trains the neural network for 50,000 epochs** to predict the characters of `"Hello, world!"` based on their positions, including artificial delays, cache trashing, and CPU waste.
+
+4. **Validates the trained network**, printing accuracy statistics for predictions of already-known characters.
+
+5. **Allocates a shared `MessageBuilder`**, including a byte buffer, mutex, checksum, and launches a background scribbler thread.
+
+6. **Runs the scribbler thread indefinitely**, continuously recalculating checksums, randomly corrupting memory when mismatches occur, and generating garbage allocations.
+
+7. **Constructs the message one character at a time**, where each character:
+
+   * Is derived from a hardcoded string via reversible obfuscation.
+   * Is written **bit-by-bit**, each bit guarded by a mutex, disaster RNG, fake cryptographic checks, potential corruption, and deliberate inefficiency.
+
+8. **Reconstructs each character** using multiple redundant methods and majority voting.
+
+9. **Validates each character via a fake blockchain**, hashing the previous and current characters and enforcing arbitrary rules.
+
+10. **Runs a consensus verification**, requiring agreement across multiple comparison strategies (direct, XOR, bitwise, hash).
+
+11. **Simulates network latency**, introducing random delays and retries.
+
+12. **Prints each character using massive parallelism**, spawning 16 threads per character that do no useful work before allowing a single `putchar()`.
+
+13. **Repeats steps 7-12 until all characters are printed**, then exits while leaking memory and relying on the OS for cleanup.
+
+---
+
+**Final result (after about half an hour on my 5800X):**
+
+```
+Hello, world!
 ```
 
-## Running
+**In short:**
+It reconstructs, corrupts, verifies, recomputes, validates, delays, parallelizes, and *eventually* prints a trivial string using nearly every computer science concept at once—on purpose, inefficiently.
+
+
+---
+
+## Supported Architectures
+
+- x86 / x86_64
+- ARM32 / ARM64
+- PowerPC
+- “Generic” (when all else fails)
+
+Inline assembly included for each, because portability should hurt.
+
+---
+
+## Build Instructions
 
 ```bash
-./goodbyecruelworld
-```
+gcc -Wall -Wextra -pedantic -o goodbyecruelworld goodbyecruelworld.c -lpthread -lm
+````
 
-Or with timing:
-```bash
-time ./goodbyecruelworld
-```
+Notes:
 
-## Expected Behavior
+* `-O0` is mandatory to preserve inefficiency
+* Removing `volatile` will break the universe
+* Optimizers are considered hostile actors and should be treated as such
 
-- Runtime: **30 seconds to several minutes** depending on:
-  - How many "oops" disasters occur
-  - Mining luck (finding nonces quickly vs slowly)
-  - How many validator retries are needed
-- CPU usage: **100%** on multiple cores
-- Memory usage: **100MB - 3GB+** depending on validator attempts
-- May print "oops" 0-100 times (random)
-- **50% chance to segfault** at the end
-- **Guaranteed** to print "Hello, world!" eventually (validator forces completion after 100k attempts)
+---
 
-## Why?
+## Runtime Characteristics
 
-free will ig
+| Resource | Usage        |
+| -------- | ------------ |
+| CPU      | Yes          |
+| RAM      | Increasing   |
+| Threads  | Too many     |
+| Time     | A long time  |
+| Output   | 13 bytes     |
 
-## Architecture Notes
+---
 
-- Requires x86/x64 CPU (uses `__builtin_ia32_pause`, CPUID, RDTSC, cache flush instructions)
-- Will not compile on ARM (Mac M1/M2/M3) without modifications
-- POSIX systems only (Linux, macOS, BSD) (windows version soon)
+## Warnings
+
+* May trigger watchdog timers
+* May anger your operating system
+* May summon undefined behavior
+* May accidentally teach bad habits
+* Do **not** run on shared infrastructure
+
+---
 
 ## License
 
-Public domain. Use this code however you want.
+Unlicensed.
+You already suffer enough by reading this.
+If anything happens, don't say I didn't tell you so, because i will. This will rock your shit.
+(actually in my experiences it completes in around 30 minutes)
 
-## Warning
+---
 
-This code is intentionally terrible. Do not use in production. Do not use anywhere. 
-I am not responsible for any damage this script does to your system. Use at your own risk. (however, i have ran it myself and it hasn't wreaked havoc.. yet)
+## Final Thoughts
+
+good luck brochacho
+
+```
+```
